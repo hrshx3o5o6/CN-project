@@ -1,0 +1,25 @@
+! ---- Vellore hospital router ----
+enable
+configure terminal
+hostname R-VLR
+interface GigabitEthernet0/0
+ description Hospital LAN
+ ip address 10.2.0.1 255.255.255.0
+ no shutdown
+interface GigabitEthernet0/1
+ description Link to R-CORE
+ ip address 172.16.2.2 255.255.255.252
+ no shutdown
+! default route toward core; core knows every LAN
+ip route 0.0.0.0 0.0.0.0 172.16.2.1
+! only allow ICMP + MedMesh P2P ports (5001-5004) + HTTP (80) from other hospitals
+ip access-list extended FROM-WAN
+ permit icmp any any
+ permit tcp any 10.2.0.0 0.0.0.255 range 5001 5004
+ permit tcp 10.2.0.0 0.0.0.255 any established
+ permit tcp any 10.2.0.0 0.0.0.255 eq 80
+ deny   ip any any log
+interface GigabitEthernet0/1
+ ip access-group FROM-WAN in
+end
+write memory

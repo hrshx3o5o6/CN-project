@@ -1,0 +1,9 @@
+Device        Interface  IP            Mask             Gateway
+Chennai Srv   NIC        10.1.0.10     255.255.255.0    10.1.0.1
+Chennai PC    NIC        10.1.0.20     255.255.255.0    10.1.0.1
+Vellore Srv   NIC        10.2.0.10     255.255.255.0    10.2.0.1
+Vellore PC    NIC        10.2.0.20     255.255.255.0    10.2.0.1
+Bengaluru Srv NIC        10.3.0.10     255.255.255.0    10.3.0.1
+Bengaluru PC  NIC        10.3.0.20     255.255.255.0    10.3.0.1
+Delhi Srv     NIC        10.4.0.10     255.255.255.0    10.4.0.1
+Delhi PC      NIC        10.4.0.20     255.255.255.0    10.4.0.1

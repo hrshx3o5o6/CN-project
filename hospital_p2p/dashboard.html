@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MedMesh Node</title>
+<style>
+:root{--bg:#f3f6f8;--card:#fff;--ink:#14232b;--mut:#62767f;--line:#e1e8ec;--teal:#0f8b8d;--teal2:#0b6e70;--ok:#1e9e5a;--warn:#d98a00;--bad:#d64545;--r:12px}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(120deg,#0b4f5c,#0f8b8d);color:#fff;padding:18px 28px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}header small{opacity:.8;display:block;font-size:12px;font-family:ui-monospace,monospace}
+.logo{font-weight:800;font-size:12px;letter-spacing:.14em;background:#ffffff22;padding:4px 10px;border-radius:99px}
+.stats{margin-left:auto;display:flex;gap:10px}.stat{background:#ffffff1f;border-radius:10px;padding:6px 14px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:11px;opacity:.85}
+main{max-width:1280px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:0 1px 2px #0001}
+.card.wide{grid-column:1/-1}h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal2);display:flex;justify-content:space-between;align-items:center}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;color:var(--mut);text-transform:uppercase;padding:4px 6px}td{padding:7px 6px;border-top:1px solid var(--line);vertical-align:top}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:600;background:#e8eef1;color:var(--mut)}
+.on{background:#dff5e8;color:var(--ok)}.off{background:#fbe3e3;color:var(--bad)}.pend{background:#fff0cc;color:var(--warn)}.mono{font-family:ui-monospace,monospace;font-size:11px;color:var(--mut)}
+button{border:0;background:var(--teal);color:#fff;padding:6px 12px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}button:hover{background:var(--teal2)}
+button.ghost{background:#e8eef1;color:var(--ink)}button.bad{background:var(--bad)}button.warn{background:var(--warn)}
+input,select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.rec{background:#f6fafb;border:1px dashed var(--teal);border-radius:10px;padding:10px 12px;margin-top:6px;font-size:13px}
+.empty{color:var(--mut);padding:8px 0}.ev{font-weight:700;font-size:12px}.sec{color:var(--bad)}
+.toast{position:fixed;bottom:18px;right:18px;background:#14232b;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.3s}.toast.show{opacity:1}
+.lock{color:var(--ok)}
+</style></head><body>
+<header><span class="logo">MEDMESH</span><div><h1 id="hn">…</h1><small id="hid"></small></div>
+<div class="stats"><div class="stat"><b id="s1">0</b><span>Peers online</span></div><div class="stat"><b id="s2">0</b><span>Pending requests</span></div><div class="stat"><b id="s3">0</b><span>Ledger blocks</span></div></div></header>
+<main>
+<section class="card"><h2>Local patient records <span class="mono">stored only on this node</span></h2><table id="pat"></table></section>
+<section class="card"><h2>Consortium peers <button class="ghost" onclick="connect()">+ Connect</button></h2><table id="peers"></table></section>
+<section class="card"><h2>Find &amp; request a record</h2>
+ <div class="row"><input id="q" placeholder="Patient ID e.g. P-1001" size="20"><button onclick="locate()">Locate in network</button></div>
+ <div id="loc" class="empty">Search asks every peer “do you hold this patient?” using a hashed ID — no data moves.</div></section>
+<section class="card"><h2>Incoming requests <span class="mono">you decide</span></h2><div id="inc"></div></section>
+<section class="card wide"><h2>My requests &amp; received records <span class="mono lock">🔒 end-to-end encrypted (X25519 + AES-256-GCM)</span></h2><div id="out"></div></section>
+<section class="card wide"><h2>Replicated audit ledger
+ <span><button class="ghost" onclick="audit(false)">Verify chains</button> <button class="ghost" onclick="audit(true)">Verify &amp; heal</button> <button class="warn" onclick="tamper()">Demo: tamper</button></span></h2>
+ <div id="aud" class="row"></div><table id="led"></table></section>
+<section class="card wide" id="secbox" style="display:none"><h2>Security events</h2><table id="sec"></table></section>
+</main><div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const t=ts=>new Date(ts*1000).toLocaleTimeString();
+async function api(p,b){const r=await fetch('/api/ui/'+p,{method:'POST',body:JSON.stringify(b||{})});const j=await r.json();if(!r.ok)throw new Error(j.error);return j}
+function toast(m){const e=$('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
+const act=f=>async(...a)=>{try{await f(...a);refresh()}catch(e){toast('⚠ '+e.message)}};
+let holders=null;
+async function refresh(){const s=await (await fetch('/api/ui/state')).json();
+ $('hn').textContent=s.me.name;$('hid').textContent='node '+s.me.node_id+' · '+s.me.url;
+ $('s1').textContent=s.peers.filter(p=>p.online).length;$('s2').textContent=s.incoming.filter(r=>r.status=='pending').length;
+ $('s3').textContent=Object.values(s.heads).reduce((a,b)=>a+b,0);
+ $('pat').innerHTML='<tr><th>ID</th><th>Name</th><th>Age</th><th>Conditions</th></tr>'+s.patients.map(p=>`<tr><td class=mono>${p.patient_id}</td><td>${esc(p.name)}</td><td>${p.age}${p.sex}</td><td>${esc(p.conditions.join(', '))}</td></tr>`).join('');
+ $('peers').innerHTML=s.peers.length?'<tr><th>Hospital</th><th>Node</th><th></th></tr>'+s.peers.map(p=>`<tr><td>${esc(p.name)}</td><td class=mono>${p.node_id}</td><td><span class="pill ${p.online?'on':'off'}">${p.online?'online':'offline'}</span></td></tr>`).join(''):'<div class=empty>No peers yet…</div>';
+ $('inc').innerHTML=s.incoming.length?s.incoming.map(r=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><b>${esc(r.from_name)}</b> wants <b>${esc(r.patient_id)}</b> <span class="pill">${esc(r.purpose)}</span> <span class=mono>${t(r.ts)}</span><br>`+(r.status=='pending'?`<button onclick="decide('${r.req_id}',true)">Approve &amp; send encrypted</button> <button class="bad" onclick="decide('${r.req_id}',false)">Deny</button>`:`<span class="pill ${r.status=='approved'?'on':'off'}">${r.status}</span>`)+'</div>').join(''):'<div class=empty>No requests.</div>';
+ $('out').innerHTML=s.outgoing.length?s.outgoing.map(r=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><b>${esc(r.patient_id)}</b> from ${esc(r.to_name)} <span class="pill">${esc(r.purpose)}</span> <span class="pill ${r.status=='received'?'on':r.status=='denied'?'off':'pend'}">${r.status}</span>`+(r.record?`<div class=rec><b>${esc(r.record.name)}</b>, ${r.record.age}${r.record.sex} · blood ${esc(r.record.blood_group)}<br>Conditions: ${esc(r.record.conditions.join(', ')||'—')}<br>Allergies: ${esc(r.record.allergies.join(', ')||'none')}<br>Medications: ${esc(r.record.medications.join(', ')||'—')}<br><span class=mono>last visit ${esc(r.record.last_visit)} · decrypted locally, integrity hash verified</span></div>`:'')+'</div>').join(''):'<div class=empty>Nothing requested yet.</div>';
+ $('led').innerHTML='<tr><th>Time</th><th>Hospital</th><th>Event</th><th>Details</th><th>Block hash</th></tr>'+s.ledger.slice().reverse().map(b=>`<tr><td class=mono>${t(b.ts)}</td><td>${esc(Object.keys(s.heads).length&&(b.author==s.me.node_id?s.me.name:(s.peers.find(p=>p.node_id==b.author)||{}).name||b.author))}</td><td class=ev>${b.event}</td><td class=mono>${esc(Object.entries(b.data).map(([k,v])=>k+'='+v).join(' '))}</td><td class=mono>#${b.index} ${b.hash.slice(0,10)}…</td></tr>`).join('');
+ $('secbox').style.display=s.security.length?'':'none';
+ $('sec').innerHTML=s.security.map(e=>`<tr><td class=mono>${t(e.ts)}</td><td class=sec><b>${e.event}</b></td><td>claimed “${esc(e.claimed)}”</td><td>${esc(e.detail)}</td></tr>`).join('');
+}
+async function locate(){const id=$('q').value.trim();if(!id)return;try{const r=await api('locate',{patient_id:id});holders=r;
+ $('loc').innerHTML=r.holders.length?r.holders.map(h=>`<div style="padding:6px 0">🏥 <b>${esc(h.name)}</b> holds ${esc(id)} <select id="pu_${h.node_id}"><option>Treatment</option><option>Emergency</option><option>Referral</option><option>Second opinion</option></select> <button onclick="reqRec('${h.node_id}','${esc(id)}')">Request record</button></div>`).join(''):'<div class=empty>No online peer holds this patient.</div>'}catch(e){toast('⚠ '+e.message)}}
+const reqRec=act(async(n,id)=>{await api('request',{node_id:n,patient_id:id,purpose:$('pu_'+n).value});toast('Request sent — waiting for the hospital to approve')});
+const decide=act(async(id,a)=>{await api('decision',{req_id:id,approve:a});toast(a?'Record encrypted & sent':'Request denied')});
+const connect=act(async()=>{const u=prompt('Peer URL (e.g. http://127.0.0.1:5002)');if(u){await api('connect',{url:u});toast('Connected')}});
+const tamper=act(async()=>{const r=await api('tamper');toast('Local replica of a peer chain corrupted — now click Verify')});
+async function audit(heal){try{const r=await api('audit',{heal});$('aud').innerHTML=Object.entries(r).map(([k,v])=>`<span class="pill ${v.ok?'on':'off'}">${esc(v.name)}: ${v.ok?'valid ✓ ('+v.length+' blocks)':'TAMPERED at block '+v.bad+' ✗'}</span>`).join('');if(heal)toast('Healed from peers')}catch(e){toast('⚠ '+e.message)}}
+refresh();setInterval(refresh,1500);
+</script></body></html>
