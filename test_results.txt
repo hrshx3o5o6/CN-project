@@ -1,0 +1,17 @@
+test_envelope_checks (tests.test_medmesh.CryptoTests.test_envelope_checks) ... ok
+test_ledger_detects_tamper (tests.test_medmesh.CryptoTests.test_ledger_detects_tamper) ... ok
+test_seal_roundtrip_and_wrong_recipient (tests.test_medmesh.CryptoTests.test_seal_roundtrip_and_wrong_recipient) ... ok
+test_1_gossip_discovery (tests.test_medmesh.NetworkTests.test_1_gossip_discovery) ... ok
+test_2_locate_uses_hash_only (tests.test_medmesh.NetworkTests.test_2_locate_uses_hash_only) ... ok
+test_3_request_approve_encrypted_delivery (tests.test_medmesh.NetworkTests.test_3_request_approve_encrypted_delivery) ... ok
+test_4_deny (tests.test_medmesh.NetworkTests.test_4_deny) ... ok
+test_5_ledger_replicates_and_heals (tests.test_medmesh.NetworkTests.test_5_ledger_replicates_and_heals) ... ok
+test_6_rogue_node_rejected (tests.test_medmesh.NetworkTests.test_6_rogue_node_rejected) ... /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/tempfile.py:484: ResourceWarning: Implicitly cleaning up <HTTPError 403: 'Forbidden'>
+  _warnings.warn(self.warn_message, ResourceWarning)
+ok
+test_7_replayed_message_rejected (tests.test_medmesh.NetworkTests.test_7_replayed_message_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 1.297s
+
+OK
